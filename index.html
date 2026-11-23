@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario de Adviento - 24 Noches Juntos</title>
+    
+    <!-- Google Fonts: Playfair Display & Montserrat -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'serif'],
+                        sans: ['"Montserrat"', 'sans-serif'],
+                    },
+                    colors: {
+                        xmasRed: '#7A1C1C',
+                        xmasRedLight: '#9B2226',
+                        xmasGreen: '#1B4332',
+                        xmasGreenLight: '#2D6A4F',
+                        xmasGold: '#D4AF37',
+                        xmasGoldBright: '#F4D03F',
+                        xmasCream: '#FDF8F2',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos personalizados y animaciones 3D */
+        body {
+            background: radial-gradient(circle at top, #1f0808 0%, #0d1b14 55%, #070e0a 100%);
+            color: #FDF8F2;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Canvas de nieve */
+        #snow-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Pantalla de Entrada con Puerta Doble Centrada */
+        .door-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: radial-gradient(circle at center, #290b0b 0%, #0d1b14 75%, #050a07 100%);
+            transition: opacity 0.85s ease, visibility 0.85s ease, transform 0.95s ease;
+        }
+
+        .door-overlay.opened {
+            pointer-events: none;
+            opacity: 0;
+            visibility: hidden;
+            transform: scale(1.08);
+            transition-delay: 0.65s;
+        }
+
+        /* Marco de la Puerta Miniatura Centrada */
+        .door-portal {
+            position: relative;
+            width: 240px;
+            height: 330px;
+            perspective: 1400px;
+            cursor: pointer;
+            border-radius: 18px 18px 8px 8px;
+            padding: 10px;
+            background: linear-gradient(145deg, #2b1d12 0%, #170f09 100%);
+            border: 3px solid #D4AF37;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(212, 175, 55, 0.25);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        @media (min-width: 640px) {
+            .door-portal {
+                width: 270px;
+                height: 370px;
+            }
+        }
+
+        .door-portal:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.9), 0 0 45px rgba(244, 208, 63, 0.4);
+        }
+
+        .door-frame-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            border-radius: 10px 10px 4px 4px;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #F4D03F 0%, #7A1C1C 75%, #120606 100%);
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
+            transform-style: preserve-3d;
+        }
+
+        .door-leaf {
+            flex: 0 0 50%;
+            width: 50%;
+            height: 100%;
+            position: relative;
+            background: linear-gradient(135deg, #681414 0%, #8c1d1d 50%, #4d0b0b 100%);
+            transition: transform 1.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            z-index: 5;
+        }
+
+        .door-left {
+            transform-origin: left center;
+            transform: rotateY(0deg);
+            border-right: 2px solid #D4AF37;
+            justify-content: flex-end;
+        }
+
+        .door-right {
+            transform-origin: right center;
+            transform: rotateY(0deg);
+            border-left: 2px solid #D4AF37;
+            justify-content: flex-start;
+        }
+
+        /* Animación 3D al abrir las puertas */
+        .door-overlay.opening .door-left {
+            transform: rotateY(-108deg);
+        }
+        .door-overlay.opening .door-right {
+            transform: rotateY(108deg);
+        }
+
+        /* Sello / Medallón central navideño */
+        .door-wreath {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+            pointer-events: none;
+        }
+        .door-overlay.opening .door-wreath {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.75);
+        }
+
+        /* Molduras decorativas de las puertas */
+        .door-molding {
+            position: absolute;
+            inset: 12px;
+            border: 1.5px solid rgba(212, 175, 55, 0.6);
+            pointer-events: none;
+        }
+        .door-molding::after {
+            content: '';
+            position: absolute;
+            inset: 6px;
+            border: 1px solid rgba(244, 208, 63, 0.25);
+        }
+
+        /* Picaportes dorados */
+        .door-handle {
+            width: 8px;
+            height: 44px;
+            background: linear-gradient(180deg, #F4D03F 0%, #D4AF37 50%, #997A15 100%);
+            border-radius: 999px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+            margin: 0 10px;
+            z-index: 2;
+        }
+
+        /* Grid Asimétrico tipo Bento perfecto (0 huecos en móvil 2 cols, tablet 4 cols y desktop 6 cols) */
+        .advent-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-auto-rows: 112px;
+            grid-auto-flow: dense;
+            gap: 14px;
+        }
+
+        @media (min-width: 640px) {
+            .advent-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                grid-auto-rows: 126px;
+                gap: 16px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .advent-grid {
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+                grid-auto-rows: 132px;
+                gap: 18px;
+            }
+        }
+
+        /* Tamaños exactos para cierre perfecto:
+           - Días 1-22: 14 de 1 col + 8 de 2 cols = 30 celdas (15 filas x 2 cols en móvil; 5 filas x 6 cols en PC)
+           - Día 23: 2 cols en móvil, 2x2 en PC
+           - Día 24: 2x2 en móvil, 4x2 en PC */
+        .span-1x1 { grid-column: span 1; grid-row: span 1; }
+        .span-2x1 { grid-column: span 2; grid-row: span 1; }
+
+        .span-day-23 {
+            grid-column: span 2;
+            grid-row: span 1;
+        }
+        @media (min-width: 1024px) {
+            .span-day-23 {
+                grid-column: span 2;
+                grid-row: span 2;
+            }
+        }
+
+        .span-day-24 {
+            grid-column: span 2;
+            grid-row: span 2;
+        }
+        @media (min-width: 640px) {
+            .span-day-24 {
+                grid-column: span 4;
+                grid-row: span 2;
+            }
+        }
+
+        /* Tarjeta / Ventana del Calendario */
+        .window-card {
+            perspective: 1000px;
+            cursor: pointer;
+            position: relative;
+            border-radius: 16px;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .window-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.45);
+        }
+
+        .window-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.4s ease;
+        }
+
+        /* Variantes de color de ventanas */
+        .theme-red {
+            background: linear-gradient(145deg, #9B2226 0%, #6b1417 100%);
+            border: 2px solid #D4AF37;
+            color: #FDF8F2;
+        }
+        .theme-green {
+            background: linear-gradient(145deg, #2D6A4F 0%, #163829 100%);
+            border: 2px solid #D4AF37;
+            color: #FDF8F2;
+        }
+        .theme-cream {
+            background: linear-gradient(145deg, #FDF8F2 0%, #efe2cf 100%);
+            border: 2px solid #D4AF37;
+            color: #7A1C1C;
+        }
+        .theme-gold-24 {
+            background: linear-gradient(135deg, #F4D03F 0%, #D4AF37 45%, #b58d1b 100%);
+            border: 3px solid #FFF8DC;
+            color: #2c0b0b;
+            box-shadow: 0 0 30px rgba(244, 208, 63, 0.45);
+        }
+
+        /* Estado abierto de la ventana */
+        .window-card.is-opened .window-inner {
+            background: linear-gradient(145deg, #16110e 0%, #241b15 100%);
+            border: 2px solid rgba(212, 175, 55, 0.65);
+            color: #F4D03F;
+        }
+        .window-card.is-opened.day-24-card .window-inner {
+            background: linear-gradient(135deg, #e5be32 0%, #c49b1d 100%);
+            color: #2c0b0b;
+            border: 3px solid #FFF8DC;
+        }
+
+        /* Animación de sacudida cuando está bloqueada */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px) rotate(-1deg); }
+            40% { transform: translateX(6px) rotate(1deg); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+        .shake-lock {
+            animation: shake 0.45s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        /* Brillo sutil en día 24 */
+        @keyframes shimmer {
+            0% { transform: translateX(-150%) rotate(25deg); }
+            100% { transform: translateX(250%) rotate(25deg); }
+        }
+        .shimmer-effect::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: 0;
+            width: 50%;
+            height: 200%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.45), transparent);
+            animation: shimmer 3.5s infinite;
+            pointer-events: none;
+        }
+
+        /* Toast notification */
+        #toast-box {
+            transform: translate(-50%, 150%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            opacity: 0;
+        }
+        #toast-box.show {
+            transform: translate(-50%, 0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased selection:bg-xmasGold selection:text-xmasRed">
+
+    <!-- Canvas de Nieve -->
+    <canvas id="snow-canvas"></canvas>
+
+    <!-- PANTALLA INICIAL: TÍTULO ARRIBA + PUERTA DOBLE NAVIDEÑA CENTRADA -->
+    <div id="door-overlay" class="door-overlay">
+        <!-- Cabecera sobre la puerta -->
+        <div class="text-center mb-7 sm:mb-9 max-w-md px-2">
+            <p class="text-xs uppercase tracking-[0.28em] text-xmasGoldBright font-semibold mb-2">Para Mercedes</p>
+            <h1 class="font-serif text-3xl sm:text-5xl font-bold text-xmasCream leading-tight mb-2">
+                Calendario de Adviento
+            </h1>
+            <p class="font-serif italic text-lg sm:text-xl text-xmasGold">
+                24 Noches Pensadas Solo Para Ti
+            </p>
+        </div>
+
+        <!-- Puerta Doble Navideña Compacta en el Centro -->
+        <div class="door-portal" onclick="openDoors()" role="button" tabindex="0" aria-label="Abrir puerta del Calendario de Adviento">
+            <div class="door-frame-inner">
+                <!-- Destello interior tras las puertas -->
+                <div class="absolute inset-0 flex items-center justify-center text-xmasCream/90">
+                    <span class="text-3xl">✨</span>
+                </div>
+
+                <!-- Hoja Izquierda -->
+                <div class="door-leaf door-left">
+                    <div class="door-molding"></div>
+                    <div class="door-handle"></div>
+                </div>
+                
+                <!-- Hoja Derecha -->
+                <div class="door-leaf door-right">
+                    <div class="door-handle"></div>
+                    <div class="door-molding"></div>
+                </div>
+
+                <!-- Corona / Emblema Central sobre la unión -->
+                <div class="door-wreath w-16 h-16 rounded-full bg-xmasGreen border-2 border-xmasGoldBright shadow-lg flex items-center justify-center text-xmasGoldBright">
+                    <svg class="w-9 h-9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                        <circle cx="12" cy="12" r="8" stroke-dasharray="3 2" />
+                        <path d="M12 6l1.6 3.5L17.5 10l-2.8 2.6.7 3.9L12 14.7l-3.4 1.8.7-3.9L6.5 10l3.9-.5L12 6z" fill="rgba(244, 208, 63, 0.25)"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL: CALENDARIO DE ADVIENTO -->
+    <main class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 pt-10 pb-24">
+        
+        <!-- Cabecera Navideña -->
+        <header class="text-center mb-10">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-xmasGreen/80 border border-xmasGold/50 text-xmasGoldBright text-xs uppercase tracking-[0.2em] mb-4 shadow">
+                <span>✨ Edición Especial Navideña ✨</span>
+            </div>
+            <h2 class="font-serif text-3xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-xmasGoldBright via-xmasCream to-xmasGold mb-3">
+                24 Noches de Retos y Juegos
+            </h2>
+            <p class="text-sm sm:text-base text-xmasCream/80 max-w-xl mx-auto font-light">
+                Cada noche de diciembre esconde un momento pensado solo para nosotros. Abre la ventana correspondiente del día y deja que empiece el juego.
+            </p>
+            
+            <!-- Indicador discreto si el Modo Vista Previa está activo -->
+            <div id="preview-banner" class="hidden mt-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/20 border border-amber-400 text-amber-200 text-xs font-medium">
+                <span>🔓 Modo Vista Previa Activo: Todas las ventanas están desbloqueadas para pruebas</span>
+            </div>
+        </header>
+
+        <!-- Cuadrícula Asimétrica de 24 Ventanas -->
+        <section id="advent-grid" class="advent-grid" aria-label="Ventanas del Calendario de Adviento">
+            <!-- Las 24 ventanas se generan dinámicamente con JavaScript -->
+        </section>
+
+    </main>
+
+    <!-- NOTIFICACIÓN TOAST (Mensaje de bloqueo por fecha) -->
+    <div id="toast-box" class="fixed bottom-6 left-1/2 z-50 w-[92vw] max-w-md pointer-events-none">
+        <div class="bg-gradient-to-r from-xmasRed to-[#591111] border-2 border-xmasGold text-xmasCream px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-full bg-xmasGold/20 border border-xmasGold flex items-center justify-center shrink-0 text-xmasGoldBright">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+            </div>
+            <p id="toast-message" class="text-sm sm:text-base font-medium leading-snug">
+                ¡Tranquila! Hasta el día X de diciembre no se puede abrir esta ventana ✨
+            </p>
+        </div>
+    </div>
+
+    <!-- MODAL DEL RETO NOCTURNO -->
+    <div id="challenge-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity duration-300" onclick="closeModalOnBackdrop(event)">
+        <div id="modal-card" class="relative w-full max-w-md rounded-3xl bg-gradient-to-b from-[#1B4332] via-[#122e22] to-[#0b1d15] border-2 border-xmasGold p-6 sm:p-8 text-center shadow-[0_0_60px_rgba(212,175,55,0.3)] transform scale-95 transition-transform duration-300">
+            
+            <!-- Borde interior decorativo -->
+            <div class="absolute inset-2.5 rounded-2xl border border-xmasGold/30 pointer-events-none"></div>
+
+            <!-- Botón Cerrar -->
+            <button onclick="closeModal()" class="absolute top-5 right-5 w-9 h-9 rounded-full bg-black/30 border border-xmasGold/40 text-xmasGoldBright hover:bg-xmasGold hover:text-xmasRed flex items-center justify-center transition cursor-pointer z-10" aria-label="Cerrar ventana">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+
+            <!-- Cabecera del Día -->
+            <div class="inline-block px-4 py-1 rounded-full bg-xmasRed border border-xmasGold text-xmasGoldBright text-xs font-bold uppercase tracking-widest mb-4">
+                <span id="modal-day-label">Día 1 de Diciembre</span>
+            </div>
+
+            <!-- Icono Temático -->
+            <div id="modal-icon" class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-xmasGold/15 border border-xmasGold/50 flex items-center justify-center text-3xl shadow-inner">
+                🎁
+            </div>
+
+            <!-- Título del Reto -->
+            <h3 id="modal-title" class="font-serif text-2xl sm:text-3xl font-bold text-xmasGoldBright mb-3 leading-tight">
+                Título del Reto
+            </h3>
+
+            <!-- Separador dorado -->
+            <div class="flex items-center justify-center gap-2 my-4 opacity-70">
+                <span class="h-px w-12 bg-xmasGold"></span>
+                <span class="text-xmasGold text-xs">✦</span>
+                <span class="h-px w-12 bg-xmasGold"></span>
+            </div>
+
+            <!-- Descripción del Reto -->
+            <p id="modal-description" class="text-xmasCream/95 text-base sm:text-lg leading-relaxed mb-7 font-light">
+                Descripción detallada del reto para esa noche.
+            </p>
+
+            <!-- Botón de acción -->
+            <button onclick="closeModal()" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-xmasGold to-xmasGoldBright text-xmasRed font-bold text-sm uppercase tracking-wider shadow-lg hover:brightness-110 transition cursor-pointer">
+                ¡Acepto el reto de esta noche! ✨
+            </button>
+        </div>
+    </div>
+
+    <!-- BOTÓN DISCRETO MODO VISTA PREVIA / PRUEBA -->
+    <div class="fixed bottom-3 left-3 z-40 flex items-center gap-2">
+        <button id="preview-toggle-btn" onclick="togglePreviewMode()" title="Activar/Desactivar Modo Vista Previa para probar todas las ventanas" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 hover:bg-black/80 border border-white/15 text-white/50 hover:text-xmasGoldBright text-xs transition cursor-pointer backdrop-blur-md">
+            <span id="preview-icon">❄️</span>
+            <span id="preview-text">Modo Vista Previa</span>
+        </button>
+        
+        <button id="reset-progress-btn" onclick="resetOpenedDays()" class="hidden px-2.5 py-1.5 rounded-full bg-red-950/70 hover:bg-red-900 border border-red-500/30 text-red-200 text-xs transition cursor-pointer" title="Volver a cerrar todas las ventanas">
+            Reiniciar
+        </button>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. DATOS DE LOS 24 RETOS Y JUEGOS NOCTURNOS
+        //    (Mezclados sin orden de intensidad y cierre matemático sin huecos)
+        // ==========================================
+        const adventChallenges = [
+            {
+                day: 1,
+                title: "Masaje en Glúteos (5 min)",
+                description: "Masaje profundo, lento y sin prisas centrado exclusivamente en tus glúteos durante 5 minutos de reloj.",
+                icon: "🍑",
+                size: "span-2x1",
+                theme: "theme-red"
+            },
+            {
+                day: 2,
+                title: "Caricias con Pluma en el Rostro (5 min)",
+                description: "Relájate por completo mientras acaricio tu rostro, cuello y clavículas con una pluma suave durante 5 minutos.",
+                icon: "🪶",
+                size: "span-1x1",
+                theme: "theme-green"
+            },
+            {
+                day: 3,
+                title: "Abrazo Sin Límite de Tiempo",
+                description: "Nos abrazamos sin mirar el reloj ni tener prisa, empezamos a acariciarnos suavemente y dejamos que el cuerpo decida dónde termina.",
+                icon: "🤗",
+                size: "span-1x1",
+                theme: "theme-cream"
+            },
+            {
+                day: 4,
+                title: "Control Total en el Sofá",
+                description: "Yo me siento cómodo en el sofá y tú tomas el mando absoluto; úsame y muévete como quieras hasta llegar al clímax.",
+                icon: "🛋️",
+                size: "span-1x1",
+                theme: "theme-green"
+            },
+            {
+                day: 5,
+                title: "Besos en el Cuello",
+                description: "Durante 3 minutos voy a recorrer tu cuello y nuca con besos muy lentos, cálidos y sin ir más allá todavía.",
+                icon: "💋",
+                size: "span-1x1",
+                theme: "theme-red"
+            },
+            {
+                day: 6,
+                title: "Vendada y Atada",
+                description: "Te vendo los ojos y ato suavemente tus manos; tu única misión esta noche es dejarte llevar y disfrutar sin hacer nada.",
+                icon: "🙈",
+                size: "span-2x1",
+                theme: "theme-cream"
+            },
+            {
+                day: 7,
+                title: "Masaje de Pies y Piernas",
+                description: "15 minutos de masaje relajante desde los pies hasta los muslos mientras te olvidas del mundo en el sofá.",
+                icon: "🦶",
+                size: "span-1x1",
+                theme: "theme-green"
+            },
+            {
+                day: 8,
+                title: "Masaje en Pechos",
+                description: "Dedicación exclusiva, lenta y envolvente para acariciar y masajear tus pechos todo el tiempo que quieras.",
+                icon: "🤲",
+                size: "span-1x1",
+                theme: "theme-red"
+            },
+            {
+                day: 9,
+                title: "Noche de Cine y Palomitas",
+                description: "Sofá, manta, palomitas recién hechas y película elegida 100% por ti, sin quejas ni interrupciones.",
+                icon: "🍿",
+                size: "span-1x1",
+                theme: "theme-cream"
+            },
+            {
+                day: 10,
+                title: "Caricias con Pincel en la Espalda (5 min)",
+                description: "Túmbate boca abajo y cierra los ojos; recorreré toda tu espalda suavemente con un pincel durante 5 minutos.",
+                icon: "🖌️",
+                size: "span-2x1",
+                theme: "theme-red"
+            },
+            {
+                day: 11,
+                title: "Noche de Lencería",
+                description: "Elige el conjunto con el que te sientas más irresistible (o déjame elegirlo a mí) para empezar la noche.",
+                icon: "🖤",
+                size: "span-1x1",
+                theme: "theme-green"
+            },
+            {
+                day: 12,
+                title: "Masaje Corporal con Aceite",
+                description: "Luces bajas, aceite templado y un masaje largo de cuerpo entero dejando que mis manos se detengan donde más disfrutes.",
+                icon: "🕯️",
+                size: "span-2x1",
+                theme: "theme-cream"
+            },
+            {
+                day: 13,
+                title: "Ducha Compartida",
+                description: "Una ducha caliente juntos sin prisas, enjabonándonos despacio y dejando que suba la temperatura.",
+                icon: "🚿",
+                size: "span-1x1",
+                theme: "theme-green"
+            },
+            {
+                day: 14,
+                title: "Compras Navideñas",
+                description: "Mañana nos vamos de compras navideñas. Tú eliges tu regalo sin mirar excusas.",
+                icon: "🛍️",
+                size: "span-1x1",
+                theme: "theme-red"
+            },
+            {
+                day: 15,
+                title: "Juego de Roles",
+                description: "Tú eliges quiénes somos esta noche, pones el escenario y dejamos que la imaginación haga el resto.",
+                icon: "🎭",
+                size: "span-2x1",
+                theme: "theme-cream"
+            },
+            {
+                day: 16,
+                title: "Striptease Privado",
+                description: "Baile lento y sensual quitándome prenda por prenda al ritmo de la canción que tú elijas.",
+                icon: "🔥",
+                size: "span-1x1",
+                theme: "theme-red"
+            },
+            {
+                day: 17,
+                title: "Noche Sin Pantallas",
+                description: "Dejamos los móviles y pantallas totalmente a un lado por esta noche. Solo tú, yo y toda mi atención para ti.",
+                icon: "📵",
+                size: "span-1x1",
+                theme: "theme-green"
+            },
+            {
+                day: 18,
+                title: "Tu Deseo es mi Orden",
+                description: "Esta noche mandas tú al 100%: pide exactamente lo que quieras, cómo lo quieras y durante el tiempo que quieras.",
+                icon: "👑",
+                size: "span-2x1",
+                theme: "theme-green"
+            },
+            {
+                day: 19,
+                title: "Rastro de Besos",
+                description: "Un recorrido lento de besos desde tu clavícula hasta tu entrepierna, quedándome allí todo el tiempo que quieras.",
+                icon: "💋",
+                size: "span-1x1",
+                theme: "theme-red"
+            },
+            {
+                day: 20,
+                title: "Caricias a Ciegas",
+                description: "Cierra los ojos mientras recorro tu cuerpo usando diferentes texturas, besos y roces sin que sepas dónde será el siguiente.",
+                icon: "✨",
+                size: "span-1x1",
+                theme: "theme-cream"
+            },
+            {
+                day: 21,
+                title: "Cumplimos tu Fantasía",
+                description: "Cuéntame esa idea o fantasía que tienes en mente y esta noche la hacemos realidad paso a paso.",
+                icon: "💫",
+                size: "span-2x1",
+                theme: "theme-green"
+            },
+            {
+                day: 22,
+                title: "Postura a tu Elección",
+                description: "Tú eliges la postura exacta, el ritmo y el lugar de la casa donde quieres que terminemos esta noche.",
+                icon: "⚡",
+                size: "span-2x1",
+                theme: "theme-red"
+            },
+            {
+                day: 23,
+                title: "Antesala de Nochebuena: Hoy Tú Eres la Cena de Navidad",
+                description: "Te tumbas sobre la mesa del comedor y yo me encargo de 'cenarte' despacio y sin prisas.",
+                icon: "🍽️",
+                size: "span-day-23",
+                theme: "theme-cream"
+            },
+            {
+                day: 24,
+                title: "Nochebuena — Vale Dorado Canjeable ✨",
+                description: "Como hoy toca familia, este pase VIP queda guardado para canjearlo el día que tú elijas: una noche entera dedicada al 100% a ti, con cena especial, masaje completo y cumplimiento total de tus deseos.",
+                icon: "👑",
+                size: "span-day-24",
+                theme: "theme-gold-24"
+            }
+        ];
+
+        // ==========================================
+        // 2. ESTADO Y PERSISTENCIA (localStorage)
+        // ==========================================
+        const STORAGE_KEY = 'mercedes_advent_opened_days_2026';
+        let openedDays = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        let previewMode = false;
+        let toastTimeout = null;
+
+        // ==========================================
+        // 3. ANIMACIÓN DE LA PUERTA DOBLE INICIAL
+        // ==========================================
+        function openDoors() {
+            const overlay = document.getElementById('door-overlay');
+            if (!overlay.classList.contains('opening')) {
+                overlay.classList.add('opening');
+                setTimeout(() => {
+                    overlay.classList.add('opened');
+                }, 650);
+            }
+        }
+
+        // Permitir abrir con teclado (Enter o Espacio)
+        document.querySelector('.door-portal').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openDoors();
+            }
+        });
+
+        // ==========================================
+        // 4. LÓGICA DE FECHA REAL Y DESBLOQUEO
+        // ==========================================
+        function isDayUnlocked(dayNumber) {
+            if (previewMode) return true;
+
+            const now = new Date();
+            const month = now.getMonth(); // 0 = Enero, 10 = Noviembre, 11 = Diciembre
+            const currentDay = now.getDate();
+
+            // Si estamos en diciembre (month === 11), se abre si currentDay >= dayNumber
+            if (month === 11) {
+                return currentDay >= dayNumber;
+            }
+            // Si ya pasó diciembre (ej. enero del año siguiente en las mismas fiestas)
+            if (month === 0 && currentDay <= 15) {
+                return true;
+            }
+            // En noviembre o cualquier otro mes anterior, bloqueado
+            return false;
+        }
+
+        // ==========================================
+        // 5. RENDERIZADO DE LA CUADRÍCULA DE 24 VENTANAS
+        // ==========================================
+        function renderGrid() {
+            const grid = document.getElementById('advent-grid');
+            grid.innerHTML = '';
+
+            adventChallenges.forEach((item) => {
+                const isOpened = openedDays.includes(item.day);
+                const unlocked = isDayUnlocked(item.day);
+                const isDay24 = item.day === 24;
+
+                const card = document.createElement('div');
+                card.id = `day-card-${item.day}`;
+                card.className = `window-card ${item.size} ${item.theme} ${isOpened ? 'is-opened' : ''} ${isDay24 ? 'day-24-card' : ''}`;
+                
+                // HTML interno de la ventana
+                let innerContent = '';
+                
+                if (isDay24) {
+                    innerContent = `
+                        <div class="window-inner shimmer-effect">
+                            <span class="text-xs uppercase tracking-[0.2em] font-bold opacity-80 mb-1">Nochebuena</span>
+                            <span class="font-serif text-5xl sm:text-6xl font-black leading-none mb-2">24</span>
+                            <span class="text-2xl mb-1">${isOpened ? '✨' : '🎁'}</span>
+                            <span class="text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full ${isOpened ? 'bg-black/15' : 'bg-xmasRed text-xmasGoldBright'}">
+                                ${isOpened ? 'Ver Gran Reto' : 'Gran Final'}
+                            </span>
+                        </div>
+                    `;
+                } else {
+                    innerContent = `
+                        <div class="window-inner">
+                            <span class="font-serif text-3xl sm:text-4xl font-bold leading-none ${isOpened ? 'text-xmasGoldBright' : ''}">
+                                ${item.day}
+                            </span>
+                            ${isOpened 
+                                ? `<span class="text-xs font-medium mt-2 line-clamp-2 px-1 text-xmasCream/90">${item.title}</span>` 
+                                : `<span class="mt-2 text-xs opacity-60">${unlocked ? '✨ Disponible' : '🔒'}</span>`
+                            }
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = innerContent;
+                card.onclick = () => handleWindowClick(item, card);
+                grid.appendChild(card);
+            });
+        }
+
+        // ==========================================
+        // 6. INTERACCIÓN AL HACER CLIC EN UNA VENTANA
+        // ==========================================
+        function handleWindowClick(item, cardElement) {
+            if (!isDayUnlocked(item.day)) {
+                // Animación de vibración
+                cardElement.classList.remove('shake-lock');
+                void cardElement.offsetWidth; // Reflow para reiniciar animación
+                cardElement.classList.add('shake-lock');
+
+                // Mostrar Toast con el mensaje exacto solicitado
+                showToast(`¡Tranquila! Hasta el día ${item.day} de diciembre no se puede abrir esta ventana ✨`);
+                return;
+            }
+
+            // Marcar como abierto en localStorage si no lo estaba
+            if (!openedDays.includes(item.day)) {
+                openedDays.push(item.day);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(openedDays));
+                renderGrid();
+            }
+
+            // Abrir el modal con el reto de esa noche
+            openChallengeModal(item);
+        }
+
+        // ==========================================
+        // 7. NOTIFICACIÓN TOAST INFERIOR
+        // ==========================================
+        function showToast(message) {
+            const toastBox = document.getElementById('toast-box');
+            const toastMessage = document.getElementById('toast-message');
+            
+            toastMessage.textContent = message;
+            toastBox.classList.add('show');
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toastBox.classList.remove('show');
+            }, 3800);
+        }
+
+        // ==========================================
+        // 8. MODAL DE RETO NOCTURNO
+        // ==========================================
+        function openChallengeModal(item) {
+            const modal = document.getElementById('challenge-modal');
+            const modalCard = document.getElementById('modal-card');
+            
+            document.getElementById('modal-day-label').textContent = `Día ${item.day} de Diciembre`;
+            document.getElementById('modal-icon').textContent = item.icon;
+            document.getElementById('modal-title').textContent = item.title;
+            document.getElementById('modal-description').textContent = item.description;
+
+            // Estilo especial si es el día 24
+            if (item.day === 24) {
+                modalCard.classList.remove('from-[#1B4332]', 'via-[#122e22]', 'to-[#0b1d15]');
+                modalCard.classList.add('from-[#7A1C1C]', 'via-[#4a0e0e]', 'to-[#240606]');
+            } else {
+                modalCard.classList.add('from-[#1B4332]', 'via-[#122e22]', 'to-[#0b1d15]');
+                modalCard.classList.remove('from-[#7A1C1C]', 'via-[#4a0e0e]', 'to-[#240606]');
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            setTimeout(() => {
+                modalCard.classList.remove('scale-95');
+                modalCard.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('challenge-modal');
+            const modalCard = document.getElementById('modal-card');
+            
+            modalCard.classList.remove('scale-100');
+            modalCard.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
+        }
+
+        function closeModalOnBackdrop(event) {
+            if (event.target.id === 'challenge-modal') {
+                closeModal();
+            }
+        }
+
+        // ==========================================
+        // 9. MODO VISTA PREVIA / PRUEBA DISCRETO
+        // ==========================================
+        function togglePreviewMode() {
+            previewMode = !previewMode;
+            
+            const btn = document.getElementById('preview-toggle-btn');
+            const icon = document.getElementById('preview-icon');
+            const text = document.getElementById('preview-text');
+            const banner = document.getElementById('preview-banner');
+            const resetBtn = document.getElementById('reset-progress-btn');
+
+            if (previewMode) {
+                icon.textContent = '🔓';
+                text.textContent = 'Vista Previa: ON';
+                btn.classList.add('border-xmasGold', 'text-xmasGoldBright', 'bg-black/80');
+                banner.classList.remove('hidden');
+                resetBtn.classList.remove('hidden');
+            } else {
+                icon.textContent = '❄️';
+                text.textContent = 'Modo Vista Previa';
+                btn.classList.remove('border-xmasGold', 'text-xmasGoldBright', 'bg-black/80');
+                banner.classList.add('hidden');
+                resetBtn.classList.add('hidden');
+            }
+
+            renderGrid();
+        }
+
+        function resetOpenedDays() {
+            openedDays = [];
+            localStorage.removeItem(STORAGE_KEY);
+            renderGrid();
+            showToast('Se han vuelto a cerrar todas las ventanas ✨');
+        }
+
+        // ==========================================
+        // 10. EFECTO DE NIEVE SUAVE EN EL FONDO
+        // ==========================================
+        function initSnow() {
+            const canvas = document.getElementById('snow-canvas');
+            const ctx = canvas.getContext('2d');
+            let width = canvas.width = window.innerWidth;
+            let height = canvas.height = window.innerHeight;
+
+            window.addEventListener('resize', () => {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            });
+
+            const snowflakes = [];
+            const count = Math.min(75, Math.floor(width / 15));
+
+            for (let i = 0; i < count; i++) {
+                snowflakes.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    radius: Math.random() * 2.5 + 1,
+                    speedY: Math.random() * 0.8 + 0.3,
+                    speedX: Math.random() * 0.6 - 0.3,
+                    opacity: Math.random() * 0.5 + 0.2
+                });
+            }
+
+            function drawSnow() {
+                ctx.clearRect(0, 0, width, height);
+                
+                snowflakes.forEach(flake => {
+                    ctx.beginPath();
+                    ctx.arc(flake.x, flake.y, flake.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(253, 248, 242, ${flake.opacity})`;
+                    ctx.fill();
+
+                    flake.y += flake.speedY;
+                    flake.x += flake.speedX;
+
+                    if (flake.y > height) {
+                        flake.y = -5;
+                        flake.x = Math.random() * width;
+                    }
+                    if (flake.x > width) flake.x = 0;
+                    if (flake.x < 0) flake.x = width;
+                });
+
+                requestAnimationFrame(drawSnow);
+            }
+
+            drawSnow();
+        }
+
+        // Inicializar al cargar
+        window.addEventListener('DOMContentLoaded', () => {
+            renderGrid();
+            initSnow();
+        });
+    </script>
+</body>
+</html>
